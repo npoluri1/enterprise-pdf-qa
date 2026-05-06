@@ -1,0 +1,57 @@
+version: "3.9"
+# Production overrides – use: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    command: >
+      gunicorn app.main:app
+      -k uvicorn.workers.UvicornWorker
+      -w 4
+      --bind 0.0.0.0:8000
+      --timeout 120
+      --access-logfile -
+    environment:
+      - APP_ENV=production
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 4G
+
+  worker:
+    restart: always
+    command: celery -A app.workers.celery_app worker --loglevel=warning --concurrency=4 -Q ingestion,qa
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 6G    # transformers models need RAM
+
+  postgres:
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    restart: always
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD}
+
+  nginx:
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.prod.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+
+volumes:
+  postgres_data:
+  redis_data:
+  uploads_data:
