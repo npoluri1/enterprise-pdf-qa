@@ -27,8 +27,12 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
     <span className="relative inline-flex items-center gap-1">
       <span
         className={`cursor-help underline decoration-dotted ${colour}`}
-        onMouseEnter={() => { setShow(true) }}
-        onMouseLeave={() => { setShow(false) }}
+        onMouseEnter={() => {
+          setShow(true)
+        }}
+        onMouseLeave={() => {
+          setShow(false)
+        }}
       >
         {label} confidence ({pct}%)
       </span>
@@ -66,7 +70,7 @@ export function ChatInterface({ selectedDocumentIds, mode }: Props) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const sendMessage = async () => {
+  const sendMessage = async (): Promise<void> => {
     if (!input.trim() || loading) return
 
     const userMsg: Message = {
@@ -182,7 +186,9 @@ export function ChatInterface({ selectedDocumentIds, mode }: Props) {
           <input
             type="text"
             value={input}
-            onChange={(e) => { setInput(e.target.value) }}
+            onChange={(e) => {
+              setInput(e.target.value)
+            }}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 void sendMessage()
@@ -193,7 +199,9 @@ export function ChatInterface({ selectedDocumentIds, mode }: Props) {
             disabled={loading}
           />
           <button
-            onClick={() => { void sendMessage() }}
+            onClick={() => {
+              void sendMessage()
+            }}
             disabled={loading || !input.trim()}
             className="px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition flex items-center gap-1.5"
           >
