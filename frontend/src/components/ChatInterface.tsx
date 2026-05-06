@@ -45,11 +45,20 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
   )
 }
 
+interface Citation {
+  chunk_id: string
+  document_id: string
+  document_name: string
+  page_number: number | null
+  content: string
+  relevance_score: number
+}
+
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  citations?: Array<unknown>
+  citations?: Citation[]
   model?: string
   confidence?: number | null
   streaming?: boolean
@@ -94,7 +103,7 @@ export function ChatInterface({ selectedDocumentIds, mode }: Props) {
         ? await qaApi.askMcp(req)
         : await qaApi.ask(req)
 
-      const data = resp.data as { answer: string; citations: Array<unknown>; model_used: string; confidence: number }
+      const data = resp.data as { answer: string; citations: Citation[]; model_used: string; confidence: number }
       setMessages((m) => [
         ...m,
         {
