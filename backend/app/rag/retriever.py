@@ -1,13 +1,14 @@
 """Hybrid retriever: pgvector dense search + BM25 sparse search, RRF fusion."""
+
 from __future__ import annotations
 
-import uuid
 from typing import Any
+import uuid
 
-import structlog
 from rank_bm25 import BM25Okapi
 from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
 
 from app.config import settings
 from app.models.document import Chunk
@@ -23,7 +24,7 @@ class HybridRetriever:
     3. Reciprocal Rank Fusion (RRF) to merge ranked lists
     """
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession) -> None:
         self._db = db
         self._embedder = get_embedder()
 
@@ -88,7 +89,9 @@ class HybridRetriever:
 
         stmt = (
             select(Chunk)
-            .options(selectinload(Chunk.document))  # eager-load to prevent lazy-load MissingGreenlet
+            .options(
+                selectinload(Chunk.document)
+            )  # eager-load to prevent lazy-load MissingGreenlet
             .join(Chunk.document)
             .where(Chunk.document.has(status="ready"))
         )
@@ -103,7 +106,7 @@ class HybridRetriever:
         bm25 = BM25Okapi(tokenized)
         scores = bm25.get_scores(query.lower().split())
 
-        scored = sorted(zip(scores, rows), key=lambda x: x[0], reverse=True)
+        scored = sorted(zip(scores, rows, strict=False), key=lambda x: x[0], reverse=True)
         return [
             {
                 "id": row.id,
@@ -126,7 +129,7 @@ class HybridRetriever:
         k: int = 60,
     ) -> list[dict[str, Any]]:
         scores: dict[str, float] = {}
-        meta: dict[str, dict] = {}
+        meta: dict[str, dict[str, Any]] = {}
 
         for rank, item in enumerate(dense):
             key = str(item["id"])
@@ -139,7 +142,4 @@ class HybridRetriever:
             meta.setdefault(key, item)
 
         sorted_keys = sorted(scores, key=lambda x: scores[x], reverse=True)
-        return [
-            {**meta[k], "rrf_score": scores[k]}
-            for k in sorted_keys
-        ]
+        return [{**meta[k], "rrf_score": scores[k]} for k in sorted_keys]

@@ -1,4 +1,5 @@
 """Auth endpoints: register, login, refresh."""
+
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,8 +17,10 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UserRead, status_code=201)
-async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
-    existing = (await db.execute(select(User).where(User.email == payload.email))).scalar_one_or_none()
+async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)) -> UserRead:
+    existing = (
+        await db.execute(select(User).where(User.email == payload.email))
+    ).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     user = User(
@@ -28,11 +31,14 @@ async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    return user
+    return UserRead.model_validate(user)
 
 
 @router.post("/login", response_model=Token)
-async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+async def login(
+    form: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(get_db),
+) -> Token:
     user = (await db.execute(select(User).where(User.email == form.username))).scalar_one_or_none()
     if not user or not verify_password(form.password, user.hashed_password):
         raise HTTPException(
@@ -47,5 +53,5 @@ async def login(form: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = 
 
 
 @router.get("/me", response_model=UserRead)
-async def me(current_user: User = Depends(get_current_user)):
-    return current_user
+async def me(current_user: User = Depends(get_current_user)) -> UserRead:
+    return UserRead.model_validate(current_user)

@@ -5,6 +5,7 @@ POST /api/v1/qa/ask          – standard RAG (LangGraph multi-agent)
 POST /api/v1/qa/ask/mcp      – Claude + MCP agentic loop
 GET  /api/v1/qa/stream       – SSE streaming answer
 """
+
 from __future__ import annotations
 
 import json
@@ -27,7 +28,7 @@ router = APIRouter(prefix="/qa", tags=["qa"])
 async def ask(
     payload: QuestionRequest,
     current_user: User = Depends(get_current_user),
-):
+) -> QuestionResponse:
     """Multi-agent LangGraph RAG pipeline."""
     graph = build_qa_graph()
     result = await graph.ainvoke(
@@ -61,10 +62,11 @@ async def ask_mcp(
     payload: QuestionRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> QuestionResponse:
     """Claude + MCP tool-use agentic loop (Anthropic)."""
     import anthropic as anthropic_sdk
     from fastapi import HTTPException
+
     from app.config import settings
 
     key = settings.anthropic_api_key
@@ -95,9 +97,13 @@ async def ask_mcp(
             ),
         )
     except anthropic_sdk.RateLimitError:
-        raise HTTPException(status_code=503, detail="Anthropic rate limit reached — try again shortly.")
+        raise HTTPException(
+            status_code=503, detail="Anthropic rate limit reached — try again shortly."
+        )
     except anthropic_sdk.APIConnectionError:
-        raise HTTPException(status_code=503, detail="Cannot reach Anthropic API — check network connectivity.")
+        raise HTTPException(
+            status_code=503, detail="Cannot reach Anthropic API — check network connectivity."
+        )
 
     return QuestionResponse(
         question=payload.question,
@@ -115,7 +121,7 @@ async def ask_stream(
     payload: QuestionRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
-):
+) -> StreamingResponse:
     """Server-Sent Events streaming answer."""
     from app.rag.pipeline import RAGPipeline
 

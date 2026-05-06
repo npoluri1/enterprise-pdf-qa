@@ -4,30 +4,36 @@ Core RAG pipeline built with LangChain.
 Flow:
   question → query expansion → hybrid retrieval → reranking → LLM answer + citations
 """
+
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
+from typing import Any
 import uuid
-from typing import Any, AsyncGenerator
 
-import structlog
 from langchain.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
 
 from app.config import settings
-from app.rag.embeddings import get_embedder
-from app.rag.retriever import HybridRetriever
 from app.rag.reranker import CrossEncoderReranker
+from app.rag.retriever import HybridRetriever
 from app.schemas.qa import Citation
 
 log = structlog.get_logger(__name__)
 
 # ── Prompts ──────────────────────────────────────────────────────────────────
 
-QUERY_EXPANSION_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", "You are a search query optimizer. Given a user question, generate 3 diverse search queries that together would retrieve the most relevant document passages. Return ONLY the queries, one per line."),
-    ("human", "{question}"),
-])
+QUERY_EXPANSION_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "You are a search query optimizer. Given a user question, generate 3 diverse search queries that together would retrieve the most relevant document passages. Return ONLY the queries, one per line.",
+        ),
+        ("human", "{question}"),
+    ]
+)
 
 QA_SYSTEM_PROMPT = """You are an expert enterprise document analyst. Answer the user's question accurately and concisely using ONLY the provided context.
 
@@ -40,15 +46,18 @@ Rules:
 Context:
 {context}"""
 
-QA_PROMPT = ChatPromptTemplate.from_messages([
-    ("system", QA_SYSTEM_PROMPT),
-    ("human", "{question}"),
-])
+QA_PROMPT = ChatPromptTemplate.from_messages(
+    [
+        ("system", QA_SYSTEM_PROMPT),
+        ("human", "{question}"),
+    ]
+)
 
 
-def _get_llm(streaming: bool = False):
+def _get_llm(streaming: bool = False) -> Any:
     if settings.primary_llm == "anthropic":
         from langchain_anthropic import ChatAnthropic
+
         return ChatAnthropic(
             model=settings.anthropic_model,
             anthropic_api_key=settings.anthropic_api_key,
@@ -56,6 +65,7 @@ def _get_llm(streaming: bool = False):
             max_tokens=2048,
         )
     from langchain_openai import ChatOpenAI
+
     return ChatOpenAI(
         model=settings.openai_model,
         openai_api_key=settings.openai_api_key,
@@ -66,7 +76,7 @@ def _get_llm(streaming: bool = False):
 
 
 class RAGPipeline:
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession) -> None:
         self._db = db
         self._retriever = HybridRetriever(db)
         self._reranker = CrossEncoderReranker()
@@ -83,10 +93,12 @@ class RAGPipeline:
         all_queries = [question] + expanded
 
         # 2. Retrieve candidates for all queries
-        all_candidates: list[dict] = []
-        seen_ids: set = set()
+        all_candidates: list[dict[str, Any]] = []
+        seen_ids: set[str] = set()
         for q in all_queries:
-            results = await self._retriever.retrieve(q, document_ids, top_k=settings.retrieval_top_k)
+            results = await self._retriever.retrieve(
+                q, document_ids, top_k=settings.retrieval_top_k
+            )
             for r in results:
                 if str(r["id"]) not in seen_ids:
                     all_candidates.append(r)
@@ -96,7 +108,9 @@ class RAGPipeline:
         if use_reranker and all_candidates:
             final_chunks = await self._reranker.rerank(question, all_candidates, top_k=top_k)
         else:
-            final_chunks = sorted(all_candidates, key=lambda x: x.get("rrf_score", 0), reverse=True)[:top_k]
+            final_chunks = sorted(
+                all_candidates, key=lambda x: x.get("rrf_score", 0), reverse=True
+            )[:top_k]
 
         if not final_chunks:
             return {
@@ -132,9 +146,11 @@ class RAGPipeline:
         document_ids: list[uuid.UUID] | None = None,
         top_k: int = settings.final_top_k,
         use_reranker: bool = True,
-    ) -> AsyncGenerator[dict, None]:
+    ) -> AsyncGenerator[dict[str, Any], None]:
         # Retrieve and rerank first
-        all_candidates = await self._retriever.retrieve(question, document_ids, top_k=settings.retrieval_top_k)
+        all_candidates = await self._retriever.retrieve(
+            question, document_ids, top_k=settings.retrieval_top_k
+        )
         if use_reranker and all_candidates:
             final_chunks = await self._reranker.rerank(question, all_candidates, top_k=top_k)
         else:
@@ -164,7 +180,7 @@ class RAGPipeline:
             return []
 
     @staticmethod
-    def _build_context(chunks: list[dict]) -> str:
+    def _build_context(chunks: list[dict[str, Any]]) -> str:
         parts = []
         for i, c in enumerate(chunks, 1):
             doc = c.get("original_name", "Unknown")
@@ -173,7 +189,7 @@ class RAGPipeline:
         return "\n\n---\n\n".join(parts)
 
     @staticmethod
-    def _build_citations(chunks: list[dict]) -> list[Citation]:
+    def _build_citations(chunks: list[dict[str, Any]]) -> list[Citation]:
         return [
             Citation(
                 chunk_id=uuid.UUID(str(c["id"])),

@@ -1,9 +1,9 @@
 """Document, Chunk, and Embedding models with pgvector."""
+
 from __future__ import annotations
 
-import uuid
 from datetime import datetime
-from typing import Optional
+import uuid
 
 from pgvector.sqlalchemy import Vector
 from sqlalchemy import (
@@ -26,7 +26,9 @@ class Document(Base):
     __tablename__ = "documents"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    owner_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    owner_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
+    )
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
     original_name: Mapped[str] = mapped_column(String(512), nullable=False)
     file_path: Mapped[str] = mapped_column(String(1024), nullable=False)
@@ -34,31 +36,42 @@ class Document(Base):
     mime_type: Mapped[str] = mapped_column(String(128), default="application/pdf")
     status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     # pending | processing | ready | failed
-    page_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    chunk_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    meta: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
-    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    chunk_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
 
-    owner: Mapped["User"] = relationship("User", back_populates="documents")  # noqa: F821
-    chunks: Mapped[list["Chunk"]] = relationship("Chunk", back_populates="document", cascade="all, delete-orphan")
+    owner: Mapped[User] = relationship("User", back_populates="documents")  # noqa: F821
+    chunks: Mapped[list[Chunk]] = relationship(
+        "Chunk", back_populates="document", cascade="all, delete-orphan"
+    )
 
 
 class Chunk(Base):
     __tablename__ = "chunks"
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    document_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True)
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    embedding: Mapped[Optional[list[float]]] = mapped_column(Vector(settings.embedding_dimension), nullable=True)
+    embedding: Mapped[list[float] | None] = mapped_column(
+        Vector(settings.embedding_dimension), nullable=True
+    )
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
-    page_number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    token_count: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
-    meta: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    page_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    token_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    meta: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
-    document: Mapped["Document"] = relationship("Document", back_populates="chunks")
+    document: Mapped[Document] = relationship("Document", back_populates="chunks")
 
     __table_args__ = (
         Index(

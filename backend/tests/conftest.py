@@ -1,11 +1,8 @@
 """Shared pytest fixtures for all test modules."""
 from __future__ import annotations
 
-import asyncio
-import io
 import uuid
 from typing import AsyncGenerator
-from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from httpx import ASGITransport, AsyncClient
@@ -20,16 +17,7 @@ from app.models.user import User
 
 # ── Test database ─────────────────────────────────────────────────────────────
 
-TEST_DATABASE_URL = settings.database_url.replace(
-    "/pdf_qa", "/pdf_qa_test"
-)
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
+TEST_DATABASE_URL = settings.database_url.replace("/pdf_qa", "/pdf_qa_test")
 
 
 @pytest.fixture(scope="session")

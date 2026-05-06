@@ -4,20 +4,21 @@ Claude + MCP agentic Q&A.
 Uses Anthropic's tool_use API so Claude can call document-search tools
 in an agentic loop, gathering evidence before composing a final answer.
 """
+
 from __future__ import annotations
 
 import json
-import uuid
 from typing import Any
+import uuid
 
 import anthropic
-import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
+import structlog
 
 from app.config import settings
 from app.mcp.tools import ALL_MCP_TOOLS
-from app.rag.retriever import HybridRetriever
 from app.rag.reranker import CrossEncoderReranker
+from app.rag.retriever import HybridRetriever
 from app.schemas.qa import Citation
 
 log = structlog.get_logger(__name__)
@@ -34,7 +35,7 @@ class MCPDocumentServer:
       4. Repeat until Claude produces a final answer
     """
 
-    def __init__(self, db: AsyncSession):
+    def __init__(self, db: AsyncSession) -> None:
         self._db = db
         self._client = anthropic.AsyncAnthropic(api_key=settings.anthropic_api_key)
         self._retriever = HybridRetriever(db)
@@ -46,7 +47,7 @@ class MCPDocumentServer:
         document_ids: list[uuid.UUID] | None = None,
         top_k: int = settings.final_top_k,
     ) -> dict[str, Any]:
-        messages: list[dict] = [{"role": "user", "content": question}]
+        messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
         collected_citations: list[Citation] = []
         turns = 0
 
@@ -70,8 +71,7 @@ class MCPDocumentServer:
             if resp.stop_reason == "end_turn":
                 # Final answer
                 answer_text = " ".join(
-                    block.text for block in resp.content
-                    if hasattr(block, "text")
+                    block.text for block in resp.content if hasattr(block, "text")
                 )
                 return {
                     "answer": answer_text,
@@ -84,7 +84,7 @@ class MCPDocumentServer:
 
             if resp.stop_reason == "tool_use":
                 # Execute all tool calls in this turn
-                tool_results = []
+                tool_results: list[dict[str, Any]] = []
                 for block in resp.content:
                     if block.type != "tool_use":
                         continue
@@ -92,11 +92,13 @@ class MCPDocumentServer:
                         block.name, block.input, document_ids, top_k
                     )
                     collected_citations.extend(new_citations)
-                    tool_results.append({
-                        "type": "tool_result",
-                        "tool_use_id": block.id,
-                        "content": json.dumps(result),
-                    })
+                    tool_results.append(
+                        {
+                            "type": "tool_result",
+                            "tool_use_id": block.id,
+                            "content": json.dumps(result),
+                        }
+                    )
 
                 messages.append({"role": "user", "content": tool_results})
 
@@ -113,10 +115,10 @@ class MCPDocumentServer:
     async def _execute_tool(
         self,
         name: str,
-        inputs: dict,
+        inputs: dict[str, Any],
         document_ids: list[uuid.UUID] | None,
         top_k: int,
-    ) -> tuple[dict, list[Citation]]:
+    ) -> tuple[dict[str, Any], list[Citation]]:
         if name == "search_documents":
             return await self._tool_search(inputs, document_ids, top_k)
         if name == "get_document_metadata":
@@ -126,40 +128,48 @@ class MCPDocumentServer:
         return {"error": f"Unknown tool: {name}"}, []
 
     async def _tool_search(
-        self, inputs: dict, document_ids: list[uuid.UUID] | None, top_k: int
-    ) -> tuple[dict, list[Citation]]:
+        self, inputs: dict[str, Any], document_ids: list[uuid.UUID] | None, top_k: int
+    ) -> tuple[dict[str, Any], list[Citation]]:
         query = inputs["query"]
         scoped_ids = inputs.get("document_ids")
         if scoped_ids:
             document_ids = [uuid.UUID(d) for d in scoped_ids]
         k = min(inputs.get("top_k", top_k), 20)
 
-        candidates = await self._retriever.retrieve(query, document_ids, top_k=settings.retrieval_top_k)
+        candidates = await self._retriever.retrieve(
+            query, document_ids, top_k=settings.retrieval_top_k
+        )
         final = await self._reranker.rerank(query, candidates, top_k=k) if candidates else []
 
         passages = []
         citations: list[Citation] = []
         for c in final:
-            passages.append({
-                "text": c["content"],
-                "source": c.get("original_name", "Unknown"),
-                "page": c.get("page_number"),
-                "score": round(float(c.get("rerank_score") or c.get("rrf_score") or 0), 4),
-            })
-            citations.append(Citation(
-                chunk_id=uuid.UUID(str(c["id"])),
-                document_id=uuid.UUID(str(c["document_id"])),
-                document_name=c.get("original_name", "Unknown"),
-                page_number=c.get("page_number"),
-                content=c["content"][:300],
-                relevance_score=float(c.get("rerank_score") or c.get("rrf_score") or 0),
-            ))
+            passages.append(
+                {
+                    "text": c["content"],
+                    "source": c.get("original_name", "Unknown"),
+                    "page": c.get("page_number"),
+                    "score": round(float(c.get("rerank_score") or c.get("rrf_score") or 0), 4),
+                }
+            )
+            citations.append(
+                Citation(
+                    chunk_id=uuid.UUID(str(c["id"])),
+                    document_id=uuid.UUID(str(c["document_id"])),
+                    document_name=c.get("original_name", "Unknown"),
+                    page_number=c.get("page_number"),
+                    content=c["content"][:300],
+                    relevance_score=float(c.get("rerank_score") or c.get("rrf_score") or 0),
+                )
+            )
 
         return {"passages": passages, "total_found": len(passages)}, citations
 
-    async def _tool_metadata(self, inputs: dict) -> tuple[dict, list]:
+    async def _tool_metadata(self, inputs: dict[str, Any]) -> tuple[dict[str, Any], list[Citation]]:
         from sqlalchemy import select
+
         from app.models.document import Document
+
         doc_id = uuid.UUID(inputs["document_id"])
         stmt = select(Document).where(Document.id == doc_id)
         doc = (await self._db.execute(stmt)).scalar_one_or_none()
@@ -174,14 +184,15 @@ class MCPDocumentServer:
             "uploaded_at": doc.created_at.isoformat(),
         }, []
 
-    async def _tool_list(self) -> tuple[dict, list]:
+    async def _tool_list(self) -> tuple[dict[str, Any], list[Citation]]:
         from sqlalchemy import select
+
         from app.models.document import Document
+
         stmt = select(Document).where(Document.status == "ready")
         docs = (await self._db.execute(stmt)).scalars().all()
         return {
             "documents": [
-                {"id": str(d.id), "name": d.original_name, "pages": d.page_count}
-                for d in docs
+                {"id": str(d.id), "name": d.original_name, "pages": d.page_count} for d in docs
             ]
         }, []

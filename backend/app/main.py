@@ -1,10 +1,11 @@
 """FastAPI application entry-point."""
+
 from __future__ import annotations
 
-import structlog
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
+import structlog
 
 from app.api.routes import auth, documents, qa
 from app.config import settings
@@ -43,20 +44,21 @@ def create_app() -> FastAPI:
 
     # ── Startup ──────────────────────────────────────────────
     @app.on_event("startup")
-    async def startup():
+    async def startup() -> None:
         log.info("startup", env=settings.app_env)
         await init_db()
         # Pre-warm embedding model
         from app.rag.embeddings import get_embedder
+
         get_embedder()
 
     @app.on_event("shutdown")
-    async def shutdown():
+    async def shutdown() -> None:
         log.info("shutdown")
 
     # ── Health check ──────────────────────────────────────────
     @app.get("/health", tags=["health"])
-    async def health():
+    async def health() -> dict[str, str]:
         return {"status": "ok", "env": settings.app_env}
 
     return app

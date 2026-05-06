@@ -4,9 +4,8 @@ MCP tool definitions for Claude integration.
 These tools let Claude (via Anthropic API tool_use) search documents,
 retrieve chunks, and look up metadata – giving Claude grounded, cited answers.
 """
-from __future__ import annotations
 
-from typing import Any
+from __future__ import annotations
 
 DOCUMENT_SEARCH_TOOL = {
     "name": "search_documents",

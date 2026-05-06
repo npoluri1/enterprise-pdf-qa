@@ -1,7 +1,7 @@
 """PDF ingestion: Unstructured.io → structured elements → text."""
+
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -60,15 +60,16 @@ class PDFProcessor:
 
     async def _process_pypdf(self, path: Path) -> list[dict[str, Any]]:
         import re
+
         from pypdf import PdfReader
 
-        _ctrl = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
+        _ctrl = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
         reader = PdfReader(str(path))
         results = []
         for i, page in enumerate(reader.pages, start=1):
             raw = page.extract_text() or ""
-            text = _ctrl.sub('', raw)   # strip null bytes and control chars
+            text = _ctrl.sub("", raw)  # strip null bytes and control chars
             if text.strip():
                 results.append(
                     {
@@ -83,4 +84,5 @@ class PDFProcessor:
 
     def get_page_count(self, file_path: str) -> int:
         from pypdf import PdfReader
+
         return len(PdfReader(file_path).pages)

@@ -1,8 +1,9 @@
 """Cross-encoder reranker using HuggingFace Transformers."""
+
 from __future__ import annotations
 
-import math
 from functools import lru_cache
+import math
 from typing import Any
 
 import structlog
@@ -13,8 +14,9 @@ log = structlog.get_logger(__name__)
 
 
 @lru_cache(maxsize=1)
-def _load_model():
+def _load_model() -> Any:
     from sentence_transformers import CrossEncoder
+
     model = CrossEncoder(settings.reranker_model, max_length=512)
     log.info("reranker_loaded", model=settings.reranker_model)
     return model
@@ -53,7 +55,7 @@ class CrossEncoderReranker:
             None, lambda: model.predict(pairs, show_progress_bar=False).tolist()
         )
 
-        for candidate, score in zip(candidates, raw_scores):
+        for candidate, score in zip(candidates, raw_scores, strict=False):
             # Store sigmoid-normalized score so all consumers get a value in (0, 1)
             candidate["rerank_score"] = _sigmoid(float(score))
 

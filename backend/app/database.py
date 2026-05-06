@@ -1,7 +1,8 @@
 """Async SQLAlchemy engine + pgvector session factory."""
+
 from __future__ import annotations
 
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
@@ -51,4 +52,5 @@ async def init_db() -> None:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         from app.models import document, user  # noqa: F401 – register models
+
         await conn.run_sync(Base.metadata.create_all)

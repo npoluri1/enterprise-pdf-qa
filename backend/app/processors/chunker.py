@@ -1,4 +1,5 @@
 """Semantic-aware text chunker using LangChain splitters."""
+
 from __future__ import annotations
 
 import re
@@ -10,12 +11,12 @@ from app.config import settings
 
 # PostgreSQL UTF-8 rejects null bytes and most C0 control characters.
 # Tab (\x09), newline (\x0a), and carriage-return (\x0d) are kept as valid text.
-_CONTROL_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
+_CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
 def _clean(text: str) -> str:
     """Strip bytes that PostgreSQL's UTF-8 encoder rejects."""
-    return _CONTROL_RE.sub('', text)
+    return _CONTROL_RE.sub("", text)
 
 
 class DocumentChunker:
@@ -23,7 +24,7 @@ class DocumentChunker:
         self,
         chunk_size: int = settings.chunk_size,
         chunk_overlap: int = settings.chunk_overlap,
-    ):
+    ) -> None:
         self._splitter = RecursiveCharacterTextSplitter(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
@@ -32,9 +33,7 @@ class DocumentChunker:
             add_start_index=True,
         )
 
-    def chunk_elements(
-        self, elements: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    def chunk_elements(self, elements: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Split parsed PDF elements into overlapping text chunks."""
         chunks: list[dict[str, Any]] = []
         index = 0

@@ -1,8 +1,9 @@
 """Shared state types for LangGraph multi-agent graph."""
+
 from __future__ import annotations
 
-import uuid
 from typing import Annotated, Any, TypedDict
+import uuid
 
 from langgraph.graph.message import add_messages
 
@@ -18,21 +19,21 @@ class AgentState(TypedDict):
     expanded_queries: list[str]
 
     # Agent outputs
-    routed_to: str                     # which specialist handled this
+    routed_to: str  # which specialist handled this
     answer: str
     citations: list[dict[str, Any]]
     confidence: float | None
 
     # Control flow
     error: str | None
-    messages: Annotated[list, add_messages]   # full message history
+    messages: Annotated[list, add_messages]  # full message history
     iteration: int
 
 
 class DocumentIngestionState(TypedDict):
     document_id: uuid.UUID
     file_path: str
-    status: str                        # pending | processing | ready | failed
+    status: str  # pending | processing | ready | failed
     elements: list[dict[str, Any]]
     chunks: list[dict[str, Any]]
     embeddings_generated: bool

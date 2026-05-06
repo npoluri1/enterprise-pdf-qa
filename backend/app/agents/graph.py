@@ -8,14 +8,14 @@ Agents:
   eval_agent      – confidence scoring + hallucination guard
   fallback_agent  – handles out-of-scope / no-context questions
 """
+
 from __future__ import annotations
 
-import uuid
 from typing import Any, Literal
 
-import structlog
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
+import structlog
 
 from app.agents.state import AgentState, DocumentIngestionState
 from app.config import settings
@@ -25,15 +25,18 @@ log = structlog.get_logger(__name__)
 
 # ── LLM factory ──────────────────────────────────────────────────────────────
 
-def _llm(temperature: float = 0.0):
+
+def _llm(temperature: float = 0.0) -> Any:
     if settings.primary_llm == "anthropic":
         from langchain_anthropic import ChatAnthropic
+
         return ChatAnthropic(
             model=settings.anthropic_model,
             anthropic_api_key=settings.anthropic_api_key,
             temperature=temperature,
         )
     from langchain_openai import ChatOpenAI
+
     return ChatOpenAI(
         model=settings.openai_model,
         openai_api_key=settings.openai_api_key,
@@ -43,19 +46,24 @@ def _llm(temperature: float = 0.0):
 
 # ── Node functions ────────────────────────────────────────────────────────────
 
+
 async def supervisor_node(state: AgentState) -> dict[str, Any]:
     """Decide routing: retrieval | fallback."""
     llm = _llm(temperature=0.0)
-    decision = await llm.ainvoke([
-        SystemMessage(content=(
-            "You are a routing supervisor. The user has uploaded documents and is asking questions about them.\n"
-            "Reply with ONLY one word:\n"
-            "- 'retrieval' for ANY question that could be answered from a document (default)\n"
-            "- 'fallback' ONLY if the question is clearly a system/technical command unrelated to any document content\n"
-            "When in doubt, always choose retrieval."
-        )),
-        HumanMessage(content=state["question"]),
-    ])
+    decision = await llm.ainvoke(
+        [
+            SystemMessage(
+                content=(
+                    "You are a routing supervisor. The user has uploaded documents and is asking questions about them.\n"
+                    "Reply with ONLY one word:\n"
+                    "- 'retrieval' for ANY question that could be answered from a document (default)\n"
+                    "- 'fallback' ONLY if the question is clearly a system/technical command unrelated to any document content\n"
+                    "When in doubt, always choose retrieval."
+                )
+            ),
+            HumanMessage(content=state["question"]),
+        ]
+    )
     route = decision.content.strip().lower()
     if route not in ("retrieval", "fallback"):
         route = "retrieval"
@@ -66,31 +74,35 @@ async def supervisor_node(state: AgentState) -> dict[str, Any]:
 async def query_expansion_node(state: AgentState) -> dict[str, Any]:
     """Generate 3 diverse sub-queries to improve recall."""
     llm = _llm(temperature=0.3)
-    resp = await llm.ainvoke([
-        SystemMessage(content=(
-            "Generate 3 diverse search queries for the given question. "
-            "Return ONLY the queries, one per line, no numbering."
-        )),
-        HumanMessage(content=state["question"]),
-    ])
+    resp = await llm.ainvoke(
+        [
+            SystemMessage(
+                content=(
+                    "Generate 3 diverse search queries for the given question. "
+                    "Return ONLY the queries, one per line, no numbering."
+                )
+            ),
+            HumanMessage(content=state["question"]),
+        ]
+    )
     queries = [q.strip() for q in resp.content.strip().split("\n") if q.strip()]
     return {"expanded_queries": queries[:3], "messages": [resp]}
 
 
-async def retrieval_node(state: AgentState, db=None) -> dict[str, Any]:
+async def retrieval_node(state: AgentState, db: Any | None = None) -> dict[str, Any]:
     """Hybrid retrieval + cross-encoder reranking.
 
     Creates its own DB session instead of using the one passed from the route.
     LangGraph runs nodes via asyncio.create_task(), which resets SQLAlchemy's
     greenlet context — reusing a session from the parent task raises MissingGreenlet.
     """
-    from app.rag.retriever import HybridRetriever
-    from app.rag.reranker import CrossEncoderReranker
     from app.database import AsyncSessionLocal
+    from app.rag.reranker import CrossEncoderReranker
+    from app.rag.retriever import HybridRetriever
 
     reranker = CrossEncoderReranker()
     queries = [state["question"]] + state.get("expanded_queries", [])
-    all_chunks: list[dict] = []
+    all_chunks: list[dict[str, Any]] = []
     seen: set[str] = set()
 
     async with AsyncSessionLocal() as session:
@@ -127,19 +139,23 @@ async def synthesis_node(state: AgentState) -> dict[str, Any]:
     context_parts = []
     for i, c in enumerate(chunks, 1):
         context_parts.append(
-            f"[{i}] Source: {c.get('original_name','Unknown')}, Page {c.get('page_number','?')}\n{c['content']}"
+            f"[{i}] Source: {c.get('original_name', 'Unknown')}, Page {c.get('page_number', '?')}\n{c['content']}"
         )
     context = "\n\n---\n\n".join(context_parts)
 
     llm = _llm(temperature=0.1)
-    resp = await llm.ainvoke([
-        SystemMessage(content=(
-            "You are an expert document analyst. Answer using ONLY the context below.\n"
-            "Cite sources inline as [Doc: <name>, Page: <n>].\n\n"
-            f"CONTEXT:\n{context}"
-        )),
-        HumanMessage(content=state["question"]),
-    ])
+    resp = await llm.ainvoke(
+        [
+            SystemMessage(
+                content=(
+                    "You are an expert document analyst. Answer using ONLY the context below.\n"
+                    "Cite sources inline as [Doc: <name>, Page: <n>].\n\n"
+                    f"CONTEXT:\n{context}"
+                )
+            ),
+            HumanMessage(content=state["question"]),
+        ]
+    )
 
     citations = [
         {
@@ -161,17 +177,23 @@ async def eval_node(state: AgentState) -> dict[str, Any]:
         return {"confidence": 0.0}
 
     llm = _llm(temperature=0.0)
-    resp = await llm.ainvoke([
-        SystemMessage(content=(
-            "Given the question, answer, and source chunks, rate answer confidence 0.0–1.0.\n"
-            "Consider: relevance, completeness, source support. Reply with ONLY a float."
-        )),
-        HumanMessage(content=(
-            f"Question: {state['question']}\n\n"
-            f"Answer: {state['answer'][:500]}\n\n"
-            f"Sources: {len(state['retrieved_chunks'])} chunks retrieved"
-        )),
-    ])
+    resp = await llm.ainvoke(
+        [
+            SystemMessage(
+                content=(
+                    "Given the question, answer, and source chunks, rate answer confidence 0.0–1.0.\n"
+                    "Consider: relevance, completeness, source support. Reply with ONLY a float."
+                )
+            ),
+            HumanMessage(
+                content=(
+                    f"Question: {state['question']}\n\n"
+                    f"Answer: {state['answer'][:500]}\n\n"
+                    f"Sources: {len(state['retrieved_chunks'])} chunks retrieved"
+                )
+            ),
+        ]
+    )
     try:
         confidence = float(resp.content.strip())
         confidence = max(0.0, min(1.0, confidence))
@@ -194,13 +216,15 @@ async def fallback_node(state: AgentState) -> dict[str, Any]:
 
 # ── Routing functions ─────────────────────────────────────────────────────────
 
+
 def route_after_supervisor(state: AgentState) -> Literal["expand", "fallback"]:
     return "fallback" if state.get("routed_to") == "fallback" else "expand"
 
 
 # ── Graph assembly ────────────────────────────────────────────────────────────
 
-def build_qa_graph():
+
+def build_qa_graph() -> Any:
     """Build and compile the Q&A agent graph."""
     graph = StateGraph(AgentState)
 
@@ -229,36 +253,49 @@ def build_qa_graph():
 
 # ── Document ingestion graph ──────────────────────────────────────────────────
 
-def build_ingestion_graph(db_url: str):
+
+def build_ingestion_graph(db_url: str) -> Any:
     """Graph for async PDF ingestion pipeline.
 
     Accepts the DB URL string instead of a session — each node that needs DB
     creates its own session inside the LangGraph task context to avoid
     MissingGreenlet errors when asyncio.create_task() resets the greenlet.
     """
-    async def parse_node(state: DocumentIngestionState) -> dict:
+
+    async def parse_node(state: DocumentIngestionState) -> dict[str, Any]:
         from app.processors.pdf_processor import PDFProcessor
+
         proc = PDFProcessor()
         try:
             elements = await proc.process(state["file_path"])
             page_count = proc.get_page_count(state["file_path"])
-            return {"elements": elements, "status": "parsed",
-                    "messages": [AIMessage(content=f"Parsed {len(elements)} elements, {page_count} pages")]}
+            return {
+                "elements": elements,
+                "status": "parsed",
+                "messages": [
+                    AIMessage(content=f"Parsed {len(elements)} elements, {page_count} pages")
+                ],
+            }
         except Exception as e:
             return {"status": "failed", "error": str(e)}
 
-    async def chunk_node(state: DocumentIngestionState) -> dict:
+    async def chunk_node(state: DocumentIngestionState) -> dict[str, Any]:
         from app.processors.chunker import DocumentChunker
+
         chunker = DocumentChunker()
         chunks = chunker.chunk_elements(state.get("elements", []))
-        return {"chunks": chunks, "status": "chunked",
-                "messages": [AIMessage(content=f"Created {len(chunks)} chunks")]}
+        return {
+            "chunks": chunks,
+            "status": "chunked",
+            "messages": [AIMessage(content=f"Created {len(chunks)} chunks")],
+        }
 
-    async def embed_node(state: DocumentIngestionState) -> dict:
-        from app.rag.embeddings import get_embedder
-        from app.models.document import Chunk, Document
+    async def embed_node(state: DocumentIngestionState) -> dict[str, Any]:
         from sqlalchemy import select
-        from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+        from app.models.document import Chunk, Document
+        from app.rag.embeddings import get_embedder
 
         embedder = get_embedder()
         chunks = state.get("chunks", [])
@@ -269,13 +306,13 @@ def build_ingestion_graph(db_url: str):
         batch_size = 100
         all_vectors: list[list[float]] = []
         for i in range(0, len(texts), batch_size):
-            vecs = await embedder.embed(texts[i: i + batch_size])
+            vecs = await embedder.embed(texts[i : i + batch_size])
             all_vectors.extend(vecs)
 
         engine = create_async_engine(db_url, pool_pre_ping=True, pool_size=5, max_overflow=0)
-        SessionFactory = async_sessionmaker(bind=engine, expire_on_commit=False)
+        session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
         try:
-            async with SessionFactory() as session:
+            async with session_factory() as session:
                 stmt = select(Document).where(Document.id == state["document_id"])
                 doc = (await session.execute(stmt)).scalar_one()
 
@@ -289,7 +326,7 @@ def build_ingestion_graph(db_url: str):
                         token_count=chunk_data.get("token_count"),
                         meta=chunk_data.get("metadata"),
                     )
-                    for chunk_data, vector in zip(chunks, all_vectors)
+                    for chunk_data, vector in zip(chunks, all_vectors, strict=False)
                 ]
                 session.add_all(chunk_objects)
                 doc.chunk_count = len(chunk_objects)
@@ -307,15 +344,16 @@ def build_ingestion_graph(db_url: str):
     def route_after_parse(state: DocumentIngestionState) -> str:
         return "failed" if state.get("status") == "failed" else "chunk"
 
-    async def failed_node(state: DocumentIngestionState) -> dict:
-        from app.models.document import Document
+    async def failed_node(state: DocumentIngestionState) -> dict[str, Any]:
         from sqlalchemy import select
-        from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker
+        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+        from app.models.document import Document
 
         engine = create_async_engine(db_url, pool_pre_ping=True)
-        SessionFactory = async_sessionmaker(bind=engine, expire_on_commit=False)
+        session_factory = async_sessionmaker(bind=engine, expire_on_commit=False)
         try:
-            async with SessionFactory() as session:
+            async with session_factory() as session:
                 stmt = select(Document).where(Document.id == state["document_id"])
                 doc = (await session.execute(stmt)).scalar_one_or_none()
                 if doc:

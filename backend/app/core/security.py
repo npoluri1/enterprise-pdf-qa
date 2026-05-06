@@ -1,8 +1,9 @@
 """JWT auth utilities."""
+
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
 import uuid
-from datetime import datetime, timedelta, timezone
 
 import bcrypt
 from jose import JWTError, jwt
@@ -21,7 +22,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 
 def create_access_token(subject: uuid.UUID, expires_delta: timedelta | None = None) -> str:
-    expire = datetime.now(timezone.utc) + (
+    expire = datetime.now(UTC) + (
         expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
     )
     payload = {"sub": str(subject), "exp": expire, "type": "access"}
