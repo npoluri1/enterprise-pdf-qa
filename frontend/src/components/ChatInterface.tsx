@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { Send, Loader, Zap, Bot } from 'lucide-react'
+import { Send, Loader, Bot } from 'lucide-react'
 import { qaApi } from '../api/client'
 import { CitationPanel } from './CitationPanel'
 import toast from 'react-hot-toast'
@@ -20,15 +20,15 @@ function ConfidenceBadge({ confidence }: { confidence: number }) {
     pct >= 70
       ? 'The answer is well-supported by your documents.'
       : pct >= 40
-      ? 'The answer is partially supported — some details may be inferred.'
-      : 'The documents had limited information on this question. Treat carefully.'
+        ? 'The answer is partially supported — some details may be inferred.'
+        : 'The documents had limited information on this question. Treat carefully.'
 
   return (
     <span className="relative inline-flex items-center gap-1">
       <span
         className={`cursor-help underline decoration-dotted ${colour}`}
-        onMouseEnter={() => setShow(true)}
-        onMouseLeave={() => setShow(false)}
+        onMouseEnter={() => { setShow(true) }}
+        onMouseLeave={() => { setShow(false) }}
       >
         {label} confidence ({pct}%)
       </span>
@@ -45,7 +45,7 @@ interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
-  citations?: any[]
+  citations?: Array<unknown>
   model?: string
   confidence?: number | null
   streaming?: boolean
@@ -90,7 +90,7 @@ export function ChatInterface({ selectedDocumentIds, mode }: Props) {
         ? await qaApi.askMcp(req)
         : await qaApi.ask(req)
 
-      const data = resp.data
+      const data = resp.data as { answer: string; citations: Array<unknown>; model_used: string; confidence: number }
       setMessages((m) => [
         ...m,
         {
@@ -103,10 +103,9 @@ export function ChatInterface({ selectedDocumentIds, mode }: Props) {
         },
       ])
     } catch (err: unknown) {
-      const detail =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-      const status =
-        (err as { response?: { status?: number } })?.response?.status
+      const error = err as { response?: { data?: { detail?: string }; status?: number } }
+      const detail = error.response?.data?.detail
+      const status = error.response?.status
 
       // Show 503 (missing API key / service unavailable) inline in chat so the full
       // message is readable — toasts truncate long text
@@ -183,14 +182,18 @@ export function ChatInterface({ selectedDocumentIds, mode }: Props) {
           <input
             type="text"
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && sendMessage()}
+            onChange={(e) => { setInput(e.target.value) }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                void sendMessage()
+              }
+            }}
             placeholder="Ask a question about your documents…"
             className="flex-1 border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             disabled={loading}
           />
           <button
-            onClick={sendMessage}
+            onClick={() => { void sendMessage() }}
             disabled={loading || !input.trim()}
             className="px-4 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 transition flex items-center gap-1.5"
           >
