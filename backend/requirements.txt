@@ -22,6 +22,7 @@ openai==1.58.1
 anthropic==0.40.0
 langchain==0.3.14
 langchain-openai==0.2.14
+langchain-anthropic==0.3.3
 langchain-community==0.3.14
 langgraph==0.2.60
 langgraph-checkpoint-postgres==2.0.9

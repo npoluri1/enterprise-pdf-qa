@@ -27,8 +27,21 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt ruff mypy
+      - name: Install linting tools
+        run: |
+          pip install ruff mypy \
+            pydantic==2.10.3 pydantic-settings==2.6.1 \
+            fastapi==0.115.5 sqlalchemy[asyncio]==2.0.36 asyncpg==0.30.0 \
+            structlog==24.4.0 python-jose[cryptography]==3.3.0 bcrypt==4.2.1 \
+            langchain==0.3.14 langgraph==0.2.60 \
+            langchain-openai==0.2.14 langchain-anthropic==0.3.3 \
+            langchain-community==0.3.14 \
+            celery==5.4.0 redis==5.2.1 \
+            anyio==4.7.0 aiofiles==24.1.0 \
+            httpx==0.28.0 uvicorn[standard]==0.32.1 \
+            python-multipart==0.0.12 numpy==1.26.4 \
+            tenacity==9.0.0 pgvector==0.3.6 \
+            prometheus-fastapi-instrumentator==7.0.0
 
       - name: Ruff lint
         run: ruff check app/
@@ -76,7 +89,8 @@ jobs:
     env:
       APP_ENV: testing
       SECRET_KEY: ci-test-secret-key-at-least-32-characters-long
-      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/pdf_qa_test
+      # DATABASE_URL points to the base db; conftest replaces /pdf_qa → /pdf_qa_test
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/pdf_qa
       REDIS_URL: redis://localhost:6379/0
       CELERY_BROKER_URL: redis://localhost:6379/1
       CELERY_RESULT_BACKEND: redis://localhost:6379/2
@@ -96,7 +110,7 @@ jobs:
           cache: pip
 
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest pytest-asyncio pytest-cov httpx
+        run: pip install -r requirements.txt
 
       - name: Run unit tests
         run: pytest tests/ -m "not integration" -v --tb=short
