@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 import uuid
 
 from pgvector.sqlalchemy import Vector
@@ -21,6 +21,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.config import settings
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class Document(Base):

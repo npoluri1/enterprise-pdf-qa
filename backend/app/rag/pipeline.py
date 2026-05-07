@@ -12,6 +12,7 @@ from typing import Any
 import uuid
 
 from langchain.prompts import ChatPromptTemplate
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.output_parsers import StrOutputParser
 from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
@@ -66,7 +67,7 @@ def _model_name() -> str:
     return settings.anthropic_model
 
 
-def _get_llm(streaming: bool = False) -> Any:
+def _get_llm(streaming: bool = False) -> BaseChatModel:
     if settings.primary_llm == "anthropic":
         from langchain_anthropic import ChatAnthropic
 

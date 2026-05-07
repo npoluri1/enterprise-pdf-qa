@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 from datetime import UTC
-from typing import Any
 import uuid
 
+from sqlalchemy.ext.asyncio import AsyncSession
 import structlog
 
 from app.agents.graph import build_ingestion_graph
@@ -62,7 +62,7 @@ async def _ingest(document_id: uuid.UUID, file_path: str) -> None:
 
 
 async def _set_status(
-    db: Any,
+    db: AsyncSession,
     document_id: uuid.UUID,
     status: str,
     error: str | None = None,

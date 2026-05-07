@@ -14,7 +14,7 @@ log = structlog.get_logger(__name__)
 
 
 @lru_cache(maxsize=1)
-def _load_model() -> Any:
+def _load_model() -> object:
     from sentence_transformers import CrossEncoder
 
     model = CrossEncoder(settings.reranker_model, max_length=512)

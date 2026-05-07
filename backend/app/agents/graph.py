@@ -13,6 +13,7 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
+from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langgraph.graph import END, StateGraph
 import structlog
@@ -26,7 +27,7 @@ log = structlog.get_logger(__name__)
 # ── LLM factory ──────────────────────────────────────────────────────────────
 
 
-def _llm(temperature: float = 0.0) -> Any:
+def _llm(temperature: float = 0.0) -> BaseChatModel:
     if settings.primary_llm == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
@@ -92,7 +93,7 @@ async def query_expansion_node(state: AgentState) -> dict[str, Any]:
     return {"expanded_queries": queries[:3], "messages": [resp]}
 
 
-async def retrieval_node(state: AgentState, db: Any | None = None) -> dict[str, Any]:
+async def retrieval_node(state: AgentState) -> dict[str, Any]:
     """Hybrid retrieval + cross-encoder reranking.
 
     Creates its own DB session instead of using the one passed from the route.
