@@ -31,7 +31,7 @@ def create_access_token(subject: uuid.UUID, expires_delta: timedelta | None = No
 
 def decode_access_token(token: str) -> uuid.UUID:
     payload = jwt.decode(token, settings.secret_key, algorithms=[ALGORITHM])
-    user_id: str = payload.get("sub")
-    if user_id is None:
-        raise JWTError("missing sub")
-    return uuid.UUID(user_id)
+    sub = payload.get("sub")
+    if not isinstance(sub, str):
+        raise JWTError("invalid or missing sub")
+    return uuid.UUID(sub)

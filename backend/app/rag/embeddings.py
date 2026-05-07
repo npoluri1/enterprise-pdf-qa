@@ -42,7 +42,12 @@ class HuggingFaceEmbedder:
         from sentence_transformers import SentenceTransformer
 
         self._model = SentenceTransformer(settings.hf_embedding_model)
-        self.dimension = self._model.get_sentence_embedding_dimension()
+        dim = self._model.get_sentence_embedding_dimension()
+        if dim is None:
+            raise RuntimeError(
+                f"Could not determine embedding dimension for {settings.hf_embedding_model}"
+            )
+        self.dimension = dim
         log.info("hf_embedder_loaded", model=settings.hf_embedding_model, dim=self.dimension)
 
     async def embed(self, texts: list[str]) -> list[list[float]]:

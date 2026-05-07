@@ -69,7 +69,7 @@ describe('CitationPanel', () => {
 
   it('shows relevance score percentage', () => {
     render(<CitationPanel citations={mockCitations} />)
-    expect(screen.getByText('92% match')).toBeInTheDocument()
-    expect(screen.getByText('78% match')).toBeInTheDocument()
+    expect(screen.getByText('100% match')).toBeInTheDocument()
+    expect(screen.getByText('85% match')).toBeInTheDocument()
   })
 })

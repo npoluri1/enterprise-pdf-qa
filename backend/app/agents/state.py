@@ -26,7 +26,7 @@ class AgentState(TypedDict):
 
     # Control flow
     error: str | None
-    messages: Annotated[list, add_messages]  # full message history
+    messages: Annotated[list[Any], add_messages]  # full message history
     iteration: int
 
 
@@ -38,4 +38,4 @@ class DocumentIngestionState(TypedDict):
     chunks: list[dict[str, Any]]
     embeddings_generated: bool
     error: str | None
-    messages: Annotated[list, add_messages]
+    messages: Annotated[list[Any], add_messages]
