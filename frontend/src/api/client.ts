@@ -20,12 +20,15 @@ api.interceptors.request.use((config) => {
 // On 401, clear auth and redirect to login
 api.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
+  (err: unknown) => {
+    const error = err as { response?: { status?: number } }
+    if (error.response?.status === 401) {
       localStorage.removeItem('access_token')
       window.location.href = '/login'
     }
-    return Promise.reject(err)
+    return Promise.reject(
+      err instanceof Error ? err : new Error(String(err))
+    )
   }
 )
 
@@ -53,13 +56,13 @@ export const docsApi = {
     return api.post('/documents/upload', form)
   },
   list: (skip = 0, limit = 20) =>
-    api.get(`/documents/?skip=${skip}&limit=${limit}`),
+    api.get(`/documents/?skip=${String(skip)}&limit=${String(limit)}`),
   get: (id: string) => api.get(`/documents/${id}`),
   delete: (id: string) => api.delete(`/documents/${id}`),
 }
 
 // ── Q&A ───────────────────────────────────────────────────────
-export type QuestionRequest = {
+export interface QuestionRequest {
   question: string
   document_ids?: string[]
   top_k?: number

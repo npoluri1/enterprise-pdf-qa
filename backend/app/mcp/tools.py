@@ -23,7 +23,9 @@ DOCUMENT_SEARCH_TOOL = {
             "document_ids": {
                 "type": "array",
                 "items": {"type": "string"},
-                "description": "Optional list of document UUIDs to scope the search. Omit to search all.",
+                "description": (
+                    "Optional list of document UUIDs to scope the search. Omit to search all."
+                ),
             },
             "top_k": {
                 "type": "integer",

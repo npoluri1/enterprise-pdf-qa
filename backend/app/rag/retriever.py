@@ -57,6 +57,7 @@ class HybridRetriever:
             ids = ", ".join(f"'{str(d)}'" for d in document_ids)
             doc_filter = f"AND c.document_id IN ({ids})"
 
+        # fmt: off
         sql = text(f"""
             SELECT
                 c.id,
@@ -74,7 +75,7 @@ class HybridRetriever:
               {doc_filter}
             ORDER BY c.embedding <=> '{vec_str}'::vector
             LIMIT :top_k
-        """)
+        """)  # noqa: S608
         rows = (await self._db.execute(sql, {"top_k": top_k})).fetchall()
         return [dict(r._mapping) for r in rows]
 

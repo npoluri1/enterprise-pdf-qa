@@ -41,7 +41,8 @@ describe('PDFUpload', () => {
     render(<PDFUpload onUploaded={onUploaded} />)
 
     const file = new File(['%PDF content'], 'test.pdf', { type: 'application/pdf' })
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const input = document.querySelector('input[type="file"]')
+    if (!input) throw new Error('File input not found')
     Object.defineProperty(input, 'files', { value: [file] })
     fireEvent.change(input)
 
@@ -59,7 +60,8 @@ describe('PDFUpload', () => {
     render(<PDFUpload onUploaded={onUploaded} />)
 
     const file = new File(['%PDF content'], 'test.pdf', { type: 'application/pdf' })
-    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const input = document.querySelector('input[type="file"]')
+    if (!input) throw new Error('File input not found')
     Object.defineProperty(input, 'files', { value: [file] })
     fireEvent.change(input)
 

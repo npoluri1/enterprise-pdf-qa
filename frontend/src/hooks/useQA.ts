@@ -65,15 +65,15 @@ export function useQA(mode: QAMode) {
         },
       ])
     } catch (err: unknown) {
-      const detail =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      const error = err as { response?: { data?: { detail?: string } } }
+      const detail = error.response?.data?.detail
       toast.error(detail ?? 'Request failed')
     } finally {
       setLoading(false)
     }
   }
 
-  const clearMessages = () => setMessages([])
+  const clearMessages = () => { setMessages([]) }
 
   return { messages, loading, ask, clearMessages }
 }

@@ -22,7 +22,7 @@ log = structlog.get_logger(__name__)
     default_retry_delay=30,
     name="app.workers.tasks.ingest_document",
 )
-def ingest_document(self, document_id: str, file_path: str) -> None:
+def ingest_document(self, document_id: str, file_path: str) -> None:  # noqa: ANN001
     """Full ingestion pipeline: parse → chunk → embed → persist."""
     log.info("ingest_document_started", document_id=document_id)
     try:
@@ -30,7 +30,7 @@ def ingest_document(self, document_id: str, file_path: str) -> None:
         log.info("ingest_document_completed", document_id=document_id)
     except Exception as exc:
         log.error("ingest_document_failed", document_id=document_id, error=str(exc))
-        raise self.retry(exc=exc)
+        raise self.retry(exc=exc) from exc
 
 
 async def _ingest(document_id: uuid.UUID, file_path: str) -> None:

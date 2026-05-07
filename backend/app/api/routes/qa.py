@@ -8,6 +8,7 @@ GET  /api/v1/qa/stream       – SSE streaming answer
 
 from __future__ import annotations
 
+from collections.abc import AsyncGenerator
 import json
 
 from fastapi import APIRouter, Depends
@@ -87,7 +88,7 @@ async def ask_mcp(
             document_ids=payload.document_ids,
             top_k=payload.top_k,
         )
-    except anthropic_sdk.AuthenticationError:
+    except anthropic_sdk.AuthenticationError as err:
         raise HTTPException(
             status_code=503,
             detail=(
@@ -95,15 +96,15 @@ async def ask_mcp(
                 "Update ANTHROPIC_API_KEY in .env, then restart: "
                 "docker compose down && docker compose up -d"
             ),
-        )
-    except anthropic_sdk.RateLimitError:
+        ) from err
+    except anthropic_sdk.RateLimitError as err:
         raise HTTPException(
             status_code=503, detail="Anthropic rate limit reached — try again shortly."
-        )
-    except anthropic_sdk.APIConnectionError:
+        ) from err
+    except anthropic_sdk.APIConnectionError as err:
         raise HTTPException(
             status_code=503, detail="Cannot reach Anthropic API — check network connectivity."
-        )
+        ) from err
 
     return QuestionResponse(
         question=payload.question,
@@ -127,7 +128,7 @@ async def ask_stream(
 
     pipeline = RAGPipeline(db)
 
-    async def event_generator():
+    async def event_generator() -> AsyncGenerator[str, None]:
         async for chunk in pipeline.stream(
             question=payload.question,
             document_ids=payload.document_ids,

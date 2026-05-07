@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # ── App ──────────────────────────────────────────────────
     app_name: str = "Enterprise PDF Q&A"
     app_env: Literal["development", "staging", "production", "testing"] = "development"
-    secret_key: str = "change-me-super-secret-key-at-least-32-chars"
+    secret_key: str = "change-me-super-secret-key-at-least-32-chars"  # noqa: S105
     access_token_expire_minutes: int = 60
     refresh_token_expire_days: int = 7
     allowed_origins: list[str] = ["http://localhost:3000", "http://localhost:5173"]

@@ -50,7 +50,7 @@ export function DocumentList({ documents, selectedIds, onToggle, onDeleted }: Pr
         return (
           <li
             key={doc.id}
-            onClick={() => doc.status === 'ready' && onToggle(doc.id)}
+            onClick={() => { if (doc.status === 'ready') onToggle(doc.id) }}
             className={`flex items-center gap-3 p-3 rounded-lg transition cursor-pointer
               ${doc.status === 'ready' ? 'hover:bg-gray-50' : 'opacity-60 cursor-default'}
               ${isSelected ? 'bg-blue-50 ring-1 ring-blue-300' : ''}`}
@@ -59,15 +59,15 @@ export function DocumentList({ documents, selectedIds, onToggle, onDeleted }: Pr
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-800 truncate">{doc.original_name}</p>
               <p className="text-xs text-gray-400">
-                {(doc.file_size / 1024).toFixed(0)} KB
-                {doc.page_count ? ` · ${doc.page_count} pages` : ''}
-                {doc.chunk_count ? ` · ${doc.chunk_count} chunks` : ''}
+                {String((doc.file_size / 1024).toFixed(0))} KB
+                {doc.page_count ? ` · ${String(doc.page_count)} pages` : ''}
+                {doc.chunk_count ? ` · ${String(doc.chunk_count)} chunks` : ''}
               </p>
             </div>
             <div className="flex items-center gap-2">
               {statusIcon[doc.status]}
               <button
-                onClick={(e) => handleDelete(doc.id, doc.original_name, e)}
+                onClick={(e) => { void handleDelete(doc.id, doc.original_name, e) }}
                 className="p-1 text-gray-300 hover:text-red-500 transition"
               >
                 <Trash2 className="h-4 w-4" />

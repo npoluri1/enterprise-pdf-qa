@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { Upload, FileText, CheckCircle, AlertCircle, Loader } from 'lucide-react'
+import { Upload, Loader } from 'lucide-react'
 import { docsApi } from '../api/client'
 import toast from 'react-hot-toast'
 
@@ -18,8 +18,9 @@ export function PDFUpload({ onUploaded }: Props) {
         await docsApi.upload(file)
         toast.success(`"${file.name}" uploaded – processing…`)
         onUploaded()
-      } catch (err: any) {
-        toast.error(err?.response?.data?.detail || 'Upload failed')
+      } catch (err: unknown) {
+        const error = err as { response?: { data?: { detail?: string } } }
+        toast.error((error.response?.data?.detail) ?? 'Upload failed')
       } finally {
         setUploading(false)
       }
@@ -27,7 +28,7 @@ export function PDFUpload({ onUploaded }: Props) {
   }, [onUploaded])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+    onDrop: (accepted) => { void onDrop(accepted) },
     accept: { 'application/pdf': ['.pdf'] },
     maxSize: 50 * 1024 * 1024,
     multiple: true,

@@ -37,10 +37,10 @@ def create_app() -> FastAPI:
     Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 
     # ── Routers ──────────────────────────────────────────────
-    PREFIX = "/api/v1"
-    app.include_router(auth.router, prefix=PREFIX)
-    app.include_router(documents.router, prefix=PREFIX)
-    app.include_router(qa.router, prefix=PREFIX)
+    api_prefix = "/api/v1"
+    app.include_router(auth.router, prefix=api_prefix)
+    app.include_router(documents.router, prefix=api_prefix)
+    app.include_router(qa.router, prefix=api_prefix)
 
     # ── Startup ──────────────────────────────────────────────
     @app.on_event("startup")

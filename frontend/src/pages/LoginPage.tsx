@@ -26,11 +26,12 @@ export function LoginPage() {
         const resp = await authApi.login(email, password)
         setToken(resp.data.access_token)
         const meResp = await authApi.me()
-        setUser(meResp.data)
+        setUser(meResp.data as { email: string; full_name: string | null })
         navigate('/dashboard')
       }
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || 'Something went wrong')
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } }
+      toast.error((error.response?.data?.detail) ?? 'Something went wrong')
     } finally {
       setLoading(false)
     }
@@ -48,13 +49,13 @@ export function LoginPage() {
           {mode === 'login' ? 'Sign in to your account' : 'Create an account'}
         </h2>
 
-        <form onSubmit={submit} className="space-y-4">
+        <form onSubmit={(e) => { void submit(e) }} className="space-y-4">
           {mode === 'register' && (
             <input
               type="text"
               placeholder="Full name (optional)"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => { setName(e.target.value) }}
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           )}
@@ -63,7 +64,7 @@ export function LoginPage() {
             placeholder="Email"
             value={email}
             required
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(e) => { setEmail(e.target.value) }}
             className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <input
@@ -71,7 +72,7 @@ export function LoginPage() {
             placeholder="Password"
             value={password}
             required
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) => { setPassword(e.target.value) }}
             className="w-full border border-gray-300 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <button
@@ -86,7 +87,7 @@ export function LoginPage() {
         <p className="text-center text-sm text-gray-500 mt-6">
           {mode === 'login' ? "Don't have an account?" : 'Already have an account?'}{' '}
           <button
-            onClick={() => setMode(mode === 'login' ? 'register' : 'login')}
+            onClick={() => { setMode(mode === 'login' ? 'register' : 'login') }}
             className="text-blue-600 font-medium hover:underline"
           >
             {mode === 'login' ? 'Register' : 'Sign in'}

@@ -29,22 +29,28 @@ QUERY_EXPANSION_PROMPT = ChatPromptTemplate.from_messages(
     [
         (
             "system",
-            "You are a search query optimizer. Given a user question, generate 3 diverse search queries that together would retrieve the most relevant document passages. Return ONLY the queries, one per line.",
+            (
+                "You are a search query optimizer. Given a user question, generate "
+                "3 diverse search queries that together would retrieve the most "
+                "relevant document passages. Return ONLY the queries, one per line."
+            ),
         ),
         ("human", "{question}"),
     ]
 )
 
-QA_SYSTEM_PROMPT = """You are an expert enterprise document analyst. Answer the user's question accurately and concisely using ONLY the provided context.
-
-Rules:
-- Cite every factual claim using [Doc: {doc_name}, Page: {page}] format inline
-- If the answer is not in the context, say "I couldn't find this information in the provided documents."
-- Be precise and professional
-- Structure longer answers with bullet points or numbered lists when appropriate
-
-Context:
-{context}"""
+QA_SYSTEM_PROMPT = (
+    "You are an expert enterprise document analyst. Answer the user's question "
+    "accurately and concisely using ONLY the provided context.\n\n"
+    "Rules:\n"
+    "- Cite every factual claim using [Doc: {doc_name}, Page: {page}] format inline\n"
+    "- If the answer is not in the context, say \"I couldn't find this information "
+    'in the provided documents."\n'
+    "- Be precise and professional\n"
+    "- Structure longer answers with bullet points or numbered lists when appropriate\n\n"
+    "Context:\n"
+    "{context}"
+)
 
 QA_PROMPT = ChatPromptTemplate.from_messages(
     [
@@ -52,6 +58,12 @@ QA_PROMPT = ChatPromptTemplate.from_messages(
         ("human", "{question}"),
     ]
 )
+
+
+def _model_name() -> str:
+    if settings.primary_llm == "openai":
+        return settings.openai_model
+    return settings.anthropic_model
 
 
 def _get_llm(streaming: bool = False) -> Any:
@@ -135,7 +147,7 @@ class RAGPipeline:
         return {
             "answer": answer,
             "citations": citations,
-            "model_used": f"{settings.primary_llm}/{settings.openai_model if settings.primary_llm == 'openai' else settings.anthropic_model}",
+            "model_used": f"{settings.primary_llm}/{_model_name()}",
             "tokens_used": None,
             "confidence": final_chunks[0].get("rerank_score") if use_reranker else None,
         }

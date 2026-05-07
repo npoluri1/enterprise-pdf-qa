@@ -46,7 +46,7 @@ export function useUploadDocument() {
       void queryClient.invalidateQueries({ queryKey: ['documents'] })
     },
     onError: (err: { response?: { data?: { detail?: string } } }) => {
-      toast.error(err?.response?.data?.detail ?? 'Upload failed')
+      toast.error(err.response?.data?.detail ?? 'Upload failed')
     },
   })
 }

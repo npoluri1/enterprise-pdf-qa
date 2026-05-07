@@ -18,8 +18,8 @@ export function useLogin() {
       setUser(meResp.data as { email: string; full_name: string | null })
       navigate('/dashboard')
     } catch (err: unknown) {
-      const detail =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      const error = err as { response?: { data?: { detail?: string } } }
+      const detail = error.response?.data?.detail
       toast.error(detail ?? 'Login failed')
     } finally {
       setLoading(false)
@@ -44,8 +44,8 @@ export function useRegister() {
       toast.success('Account created! Please log in.')
       onSuccess?.()
     } catch (err: unknown) {
-      const detail =
-        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail
+      const error = err as { response?: { data?: { detail?: string } } }
+      const detail = error.response?.data?.detail
       toast.error(detail ?? 'Registration failed')
     } finally {
       setLoading(false)

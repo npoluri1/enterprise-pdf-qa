@@ -28,9 +28,9 @@ function getRelativeScores(citations: Citation[]): number[] {
 
 function matchLabel(relative: number): { text: string; colour: string } {
   const pct = Math.round(relative * 100)
-  if (pct >= 70) return { text: `${pct}% match`, colour: 'text-green-600' }
-  if (pct >= 40) return { text: `${pct}% match`, colour: 'text-yellow-600' }
-  return { text: `${pct}% match`, colour: 'text-gray-400' }
+  if (pct >= 70) return { text: `${String(pct)}% match`, colour: 'text-green-600' }
+  if (pct >= 40) return { text: `${String(pct)}% match`, colour: 'text-yellow-600' }
+  return { text: `${String(pct)}% match`, colour: 'text-gray-400' }
 }
 
 export function CitationPanel({ citations }: Props) {
@@ -54,7 +54,7 @@ export function CitationPanel({ citations }: Props) {
           return (
             <li key={c.chunk_id} className="px-4 py-3">
               <button
-                onClick={() => setExpanded(expanded === c.chunk_id ? null : c.chunk_id)}
+                onClick={() => { setExpanded(expanded === c.chunk_id ? null : c.chunk_id) }}
                 className="flex w-full items-start justify-between gap-2 text-left"
               >
                 <div>

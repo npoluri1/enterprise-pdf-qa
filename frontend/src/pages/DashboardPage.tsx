@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { LogOut, FileText, MessageSquare, Zap, Bot } from 'lucide-react'
+import { LogOut, FileText, Zap, Bot } from 'lucide-react'
 import { docsApi } from '../api/client'
 import { useAuthStore } from '../store/authStore'
 import { useNavigate } from 'react-router-dom'
@@ -17,13 +17,25 @@ export function DashboardPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
 
-  const { data: docsData, isLoading } = useQuery({
+interface DocItem {
+  id: string
+  original_name: string
+  file_size: number
+  status: 'pending' | 'processing' | 'ready' | 'failed'
+  page_count: number | null
+  chunk_count: number | null
+  created_at: string
+}
+
+  const { data: docsData, isLoading } = useQuery<{
+    data: { items: DocItem[] }
+  }>({
     queryKey: ['documents'],
     queryFn: () => docsApi.list(),
     refetchInterval: 5000,  // poll for status updates
   })
 
-  const documents = docsData?.data?.items ?? []
+  const documents = docsData?.data.items ?? []
 
   const toggleDoc = (id: string) => {
     setSelectedIds((prev) =>
@@ -62,7 +74,7 @@ export function DashboardPage() {
             <h2 className="font-semibold text-gray-700 mb-3 flex items-center gap-1.5">
               <FileText className="h-4 w-4" /> Documents
             </h2>
-            <PDFUpload onUploaded={() => queryClient.invalidateQueries({ queryKey: ['documents'] })} />
+            <PDFUpload onUploaded={() => { void queryClient.invalidateQueries({ queryKey: ['documents'] }) }} />
           </div>
           <div className="flex-1 overflow-y-auto p-4">
             {isLoading ? (
@@ -73,7 +85,7 @@ export function DashboardPage() {
                 selectedIds={selectedIds}
                 onToggle={toggleDoc}
                 onDeleted={() => {
-                  queryClient.invalidateQueries({ queryKey: ['documents'] })
+                  void queryClient.invalidateQueries({ queryKey: ['documents'] })
                   setSelectedIds([])
                 }}
               />
@@ -82,7 +94,7 @@ export function DashboardPage() {
           {selectedIds.length > 0 && (
             <div className="p-3 border-t border-gray-100">
               <button
-                onClick={() => setSelectedIds([])}
+                onClick={() => { setSelectedIds([]) }}
                 className="text-xs text-gray-400 hover:text-gray-600"
               >
                 Clear selection ({selectedIds.length})
@@ -97,7 +109,7 @@ export function DashboardPage() {
           <div className="bg-white border-b border-gray-200 px-6 py-2 flex items-center gap-4">
             <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Mode:</span>
             <button
-              onClick={() => setMode('langgraph')}
+              onClick={() => { setMode('langgraph') }}
               className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full transition
                 ${mode === 'langgraph' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
             >
@@ -105,7 +117,7 @@ export function DashboardPage() {
               LangGraph Multi-Agent
             </button>
             <button
-              onClick={() => setMode('mcp')}
+              onClick={() => { setMode('mcp') }}
               className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full transition
                 ${mode === 'mcp' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
             >

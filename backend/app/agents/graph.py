@@ -54,10 +54,13 @@ async def supervisor_node(state: AgentState) -> dict[str, Any]:
         [
             SystemMessage(
                 content=(
-                    "You are a routing supervisor. The user has uploaded documents and is asking questions about them.\n"
+                    "You are a routing supervisor. The user has uploaded documents "
+                    "and is asking questions about them.\n"
                     "Reply with ONLY one word:\n"
-                    "- 'retrieval' for ANY question that could be answered from a document (default)\n"
-                    "- 'fallback' ONLY if the question is clearly a system/technical command unrelated to any document content\n"
+                    "- 'retrieval' for ANY question that could be answered from a "
+                    "document (default)\n"
+                    "- 'fallback' ONLY if the question is clearly a system/technical "
+                    "command unrelated to any document content\n"
                     "When in doubt, always choose retrieval."
                 )
             ),
@@ -139,7 +142,8 @@ async def synthesis_node(state: AgentState) -> dict[str, Any]:
     context_parts = []
     for i, c in enumerate(chunks, 1):
         context_parts.append(
-            f"[{i}] Source: {c.get('original_name', 'Unknown')}, Page {c.get('page_number', '?')}\n{c['content']}"
+            f"[{i}] Source: {c.get('original_name', 'Unknown')}, "
+            f"Page {c.get('page_number', '?')}\n{c['content']}"
         )
     context = "\n\n---\n\n".join(context_parts)
 
@@ -181,7 +185,8 @@ async def eval_node(state: AgentState) -> dict[str, Any]:
         [
             SystemMessage(
                 content=(
-                    "Given the question, answer, and source chunks, rate answer confidence 0.0–1.0.\n"
+                    "Given the question, answer, and source chunks, rate answer "
+                    "confidence 0.0–1.0.\n"
                     "Consider: relevance, completeness, source support. Reply with ONLY a float."
                 )
             ),

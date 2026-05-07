@@ -28,12 +28,12 @@ select = [
     "ASYNC",# flake8-async
 ]
 ignore = [
-    "ANN101",  # missing type annotation for self
-    "ANN102",  # missing type annotation for cls
     "ANN401",  # Dynamically typed expressions (Any) — sometimes needed
     "S101",    # use of assert — needed in tests
     "S106",    # hardcoded password — false positives in test fixtures
     "B008",    # do not perform function calls in default args — needed for FastAPI Depends()
+    "ASYNC240",# pathlib methods in async — acceptable without trio/anyio
+    "ASYNC230",# blocking open() in async — acceptable pattern in this codebase
 ]
 
 [tool.ruff.lint.per-file-ignores]
