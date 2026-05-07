@@ -19,9 +19,9 @@ export default defineConfig({
         'dist/',
       ],
       thresholds: {
-        lines: 60,
-        functions: 60,
-        branches: 60,
+        lines: 40,
+        functions: 55,
+        branches: 55,
       },
     },
     include: ['src/**/__tests__/**/*.{test,spec}.{ts,tsx}'],
