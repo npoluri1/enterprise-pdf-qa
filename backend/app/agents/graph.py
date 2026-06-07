@@ -113,7 +113,10 @@ async def retrieval_node(state: AgentState) -> dict[str, Any]:
         retriever = HybridRetriever(session)
         for q in queries:
             results = await retriever.retrieve(
-                q, state.get("document_ids"), top_k=settings.retrieval_top_k
+                q,
+                state.get("document_ids"),
+                top_k=settings.retrieval_top_k,
+                organization_id=state.get("organization_id"),
             )
             for r in results:
                 key = str(r["id"])

@@ -13,6 +13,7 @@ class AgentState(TypedDict):
     question: str
     document_ids: list[uuid.UUID] | None
     user_id: uuid.UUID
+    organization_id: uuid.UUID | None
 
     # Retrieved evidence
     retrieved_chunks: list[dict[str, Any]]

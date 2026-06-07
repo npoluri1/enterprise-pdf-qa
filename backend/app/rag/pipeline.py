@@ -100,17 +100,16 @@ class RAGPipeline:
         document_ids: list[uuid.UUID] | None = None,
         top_k: int = settings.final_top_k,
         use_reranker: bool = True,
+        organization_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
-        # 1. Query expansion via LLM
         expanded = await self._expand_query(question)
         all_queries = [question] + expanded
 
-        # 2. Retrieve candidates for all queries
         all_candidates: list[dict[str, Any]] = []
         seen_ids: set[str] = set()
         for q in all_queries:
             results = await self._retriever.retrieve(
-                q, document_ids, top_k=settings.retrieval_top_k
+                q, document_ids, top_k=settings.retrieval_top_k, organization_id=organization_id
             )
             for r in results:
                 if str(r["id"]) not in seen_ids:
@@ -159,10 +158,10 @@ class RAGPipeline:
         document_ids: list[uuid.UUID] | None = None,
         top_k: int = settings.final_top_k,
         use_reranker: bool = True,
+        organization_id: uuid.UUID | None = None,
     ) -> AsyncGenerator[dict[str, Any], None]:
-        # Retrieve and rerank first
         all_candidates = await self._retriever.retrieve(
-            question, document_ids, top_k=settings.retrieval_top_k
+            question, document_ids, top_k=settings.retrieval_top_k, organization_id=organization_id
         )
         if use_reranker and all_candidates:
             final_chunks = await self._reranker.rerank(question, all_candidates, top_k=top_k)

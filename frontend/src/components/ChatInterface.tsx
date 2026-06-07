@@ -67,9 +67,10 @@ interface Message {
 interface Props {
   selectedDocumentIds: string[]
   mode: 'langgraph' | 'mcp'
+  organizationId?: string
 }
 
-export function ChatInterface({ selectedDocumentIds, mode }: Props) {
+export function ChatInterface({ selectedDocumentIds, mode, organizationId }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -95,6 +96,7 @@ export function ChatInterface({ selectedDocumentIds, mode }: Props) {
       const req = {
         question: input,
         document_ids: selectedDocumentIds.length ? selectedDocumentIds : undefined,
+        organization_id: organizationId,
         top_k: 5,
         use_reranker: true,
       }

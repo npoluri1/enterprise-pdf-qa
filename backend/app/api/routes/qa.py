@@ -10,33 +10,61 @@ from __future__ import annotations
 
 from collections.abc import AsyncGenerator
 import json
+import uuid
 
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.graph import build_qa_graph
 from app.core.dependencies import get_current_user
 from app.database import get_db
 from app.mcp.server import MCPDocumentServer
+from app.models.organization import OrganizationMembership
 from app.models.user import User
 from app.schemas.qa import QuestionRequest, QuestionResponse
 
 router = APIRouter(prefix="/qa", tags=["qa"])
 
 
+async def _resolve_org(
+    org_id: uuid.UUID | None, user_id: uuid.UUID, db: AsyncSession
+) -> uuid.UUID | None:
+    if org_id:
+        membership = await db.execute(
+            select(OrganizationMembership).where(
+                OrganizationMembership.organization_id == org_id,
+                OrganizationMembership.user_id == user_id,
+            )
+        )
+        if membership.scalar_one_or_none():
+            return org_id
+    default = await db.execute(
+        select(OrganizationMembership).where(
+            OrganizationMembership.user_id == user_id,
+            OrganizationMembership.is_default.is_(True),
+        )
+    )
+    membership = default.scalar_one_or_none()
+    return membership.organization_id if membership else None
+
+
 @router.post("/ask", response_model=QuestionResponse)
 async def ask(
     payload: QuestionRequest,
     current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
 ) -> QuestionResponse:
     """Multi-agent LangGraph RAG pipeline."""
+    org_id = await _resolve_org(payload.organization_id, current_user.id, db)
     graph = build_qa_graph()
     result = await graph.ainvoke(
         {
             "question": payload.question,
             "document_ids": payload.document_ids,
             "user_id": current_user.id,
+            "organization_id": org_id,
             "retrieved_chunks": [],
             "expanded_queries": [],
             "routed_to": "",
@@ -82,11 +110,13 @@ async def ask_mcp(
         )
 
     try:
+        org_id = await _resolve_org(payload.organization_id, current_user.id, db)
         server = MCPDocumentServer(db)
         result = await server.answer(
             question=payload.question,
             document_ids=payload.document_ids,
             top_k=payload.top_k,
+            organization_id=org_id,
         )
     except anthropic_sdk.AuthenticationError as err:
         raise HTTPException(
@@ -126,6 +156,7 @@ async def ask_stream(
     """Server-Sent Events streaming answer."""
     from app.rag.pipeline import RAGPipeline
 
+    org_id = await _resolve_org(payload.organization_id, current_user.id, db)
     pipeline = RAGPipeline(db)
 
     async def event_generator() -> AsyncGenerator[str, None]:
@@ -134,6 +165,7 @@ async def ask_stream(
             document_ids=payload.document_ids,
             top_k=payload.top_k,
             use_reranker=payload.use_reranker,
+            organization_id=org_id,
         ):
             yield f"data: {json.dumps(chunk)}\n\n"
         yield "data: [DONE]\n\n"

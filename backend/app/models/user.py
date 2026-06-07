@@ -1,5 +1,3 @@
-"""User model."""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -14,6 +12,7 @@ from app.database import Base
 
 if TYPE_CHECKING:
     from app.models.document import Document
+    from app.models.organization import OrganizationMembership
 
 
 class User(Base):
@@ -30,6 +29,9 @@ class User(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    documents: Mapped[list[Document]] = relationship(  # noqa: F821
+    documents: Mapped[list[Document]] = relationship(
         "Document", back_populates="owner", lazy="select"
+    )
+    organization_memberships: Mapped[list[OrganizationMembership]] = relationship(
+        "OrganizationMembership", back_populates="user", cascade="all, delete-orphan"
     )

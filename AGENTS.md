@@ -43,6 +43,30 @@ Key paths:
 - `frontend/src/components/` — React components
 - `frontend/src/hooks/` — Custom hooks + Zustand store
 
+## Multi-Tenant (Multi-Company)
+
+Every user belongs to at least one **Organization** (company). On registration, a personal org is auto-created.
+
+| Model | Table | Purpose |
+|-------|-------|---------|
+| `Organization` | `organizations` | Company/tenant with unique slug |
+| `OrganizationMembership` | `organization_memberships` | User–Org join with role (admin/member) |
+| `Document.organization_id` | `documents` | FK → organizations; drives RAG isolation |
+
+**Tenant isolation** is baked into:
+- **Document CRUD**: scoped to user's org via `organization_id` filter
+- **RAG retrieval**: `HybridRetriever.retrieve()` accepts `organization_id` to filter both dense (pgvector SQL) and sparse (BM25) searches
+- **MCP server**: all tool calls scoped by `organization_id`
+- **LangGraph agent**: `AgentState.organization_id` passed through graph, consumed by `retrieval_node`
+- **QA endpoints**: `_resolve_org()` finds the org from request or falls back to default membership
+
+**API conventions**:
+- `POST /organizations/` — create org (creator becomes admin)
+- `GET /organizations/` — list user's orgs
+- `POST /organizations/{id}/members` — invite member by email
+- All document endpoints accept optional `org_id` query param
+- All QA endpoints accept optional `organization_id` in request body
+
 ## Critical Gotchas
 
 | Rule | Why |

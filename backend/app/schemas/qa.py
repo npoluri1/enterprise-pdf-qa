@@ -20,6 +20,9 @@ class QuestionRequest(BaseModel):
     document_ids: list[uuid.UUID] | None = Field(
         default=None, description="Scope to specific docs; None = all"
     )
+    organization_id: uuid.UUID | None = Field(
+        default=None, description="Scope to an organization (company). Uses default if not set."
+    )
     top_k: int = Field(default=5, ge=1, le=20)
     use_reranker: bool = True
     stream: bool = False

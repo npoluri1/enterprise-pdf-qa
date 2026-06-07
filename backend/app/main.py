@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 import structlog
 
-from app.api.routes import auth, documents, qa
+from app.api.routes import auth, documents, organizations, qa
 from app.config import settings
 from app.database import init_db
 
@@ -40,6 +40,7 @@ def create_app() -> FastAPI:
     api_prefix = "/api/v1"
     app.include_router(auth.router, prefix=api_prefix)
     app.include_router(documents.router, prefix=api_prefix)
+    app.include_router(organizations.router, prefix=api_prefix)
     app.include_router(qa.router, prefix=api_prefix)
 
     # ── Startup ──────────────────────────────────────────────

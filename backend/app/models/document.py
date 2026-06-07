@@ -23,6 +23,7 @@ from app.config import settings
 from app.database import Base
 
 if TYPE_CHECKING:
+    from app.models.organization import Organization
     from app.models.user import User
 
 
@@ -33,13 +34,18 @@ class Document(Base):
     owner_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
+    organization_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("organizations.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
     filename: Mapped[str] = mapped_column(String(512), nullable=False)
     original_name: Mapped[str] = mapped_column(String(512), nullable=False)
     file_path: Mapped[str] = mapped_column(String(1024), nullable=False)
     file_size: Mapped[int] = mapped_column(Integer, nullable=False)
     mime_type: Mapped[str] = mapped_column(String(128), default="application/pdf")
     status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
-    # pending | processing | ready | failed
     page_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     chunk_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     meta: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
@@ -49,7 +55,10 @@ class Document(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    owner: Mapped[User] = relationship("User", back_populates="documents")  # noqa: F821
+    owner: Mapped[User] = relationship("User", back_populates="documents")
+    organization: Mapped[Organization | None] = relationship(
+        "Organization", back_populates="documents"
+    )
     chunks: Mapped[list[Chunk]] = relationship(
         "Chunk", back_populates="document", cascade="all, delete-orphan"
     )

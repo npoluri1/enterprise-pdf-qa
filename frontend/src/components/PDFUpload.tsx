@@ -6,16 +6,17 @@ import toast from 'react-hot-toast'
 
 interface Props {
   onUploaded: () => void
+  orgId?: string
 }
 
-export function PDFUpload({ onUploaded }: Props) {
+export function PDFUpload({ onUploaded, orgId }: Props) {
   const [uploading, setUploading] = useState(false)
 
   const onDrop = useCallback(async (accepted: File[]) => {
     for (const file of accepted) {
       setUploading(true)
       try {
-        await docsApi.upload(file)
+        await docsApi.upload(file, orgId)
         toast.success(`"${file.name}" uploaded – processing…`)
         onUploaded()
       } catch (err: unknown) {
@@ -25,7 +26,7 @@ export function PDFUpload({ onUploaded }: Props) {
         setUploading(false)
       }
     }
-  }, [onUploaded])
+  }, [onUploaded, orgId])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop: (accepted) => { void onDrop(accepted) },

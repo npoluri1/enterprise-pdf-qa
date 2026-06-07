@@ -1,4 +1,3 @@
-"""Shared pytest fixtures for all test modules."""
 from __future__ import annotations
 
 import uuid
@@ -13,9 +12,8 @@ from app.core.security import create_access_token, hash_password
 from app.database import Base, get_db
 from app.main import app
 from app.models.document import Chunk, Document
+from app.models.organization import Organization, OrganizationMembership
 from app.models.user import User
-
-# ── Test database ─────────────────────────────────────────────────────────────
 
 TEST_DATABASE_URL = settings.database_url.replace("/pdf_qa", "/pdf_qa_test")
 
@@ -48,6 +46,35 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     app.dependency_overrides.clear()
 
 
+# ── Organization fixtures ─────────────────────────────────────────────────────
+
+@pytest.fixture
+async def test_organization(db_session: AsyncSession, test_user: User) -> Organization:
+    org = Organization(
+        name="Test Organization",
+        slug=f"test-org-{uuid.uuid4().hex[:8]}",
+    )
+    db_session.add(org)
+    await db_session.flush()
+
+    membership = OrganizationMembership(
+        user_id=test_user.id,
+        organization_id=org.id,
+        role="admin",
+        is_default=True,
+    )
+    db_session.add(membership)
+    await db_session.commit()
+    await db_session.refresh(org)
+    return org
+
+
+@pytest.fixture
+async def org_auth_headers(test_user: User, test_organization: Organization) -> dict[str, str]:
+    token = create_access_token(test_user.id)
+    return {"Authorization": f"Bearer {token}"}
+
+
 # ── User / auth fixtures ──────────────────────────────────────────────────────
 
 @pytest.fixture
@@ -72,9 +99,10 @@ def auth_headers(test_user: User) -> dict[str, str]:
 # ── Document fixtures ─────────────────────────────────────────────────────────
 
 @pytest.fixture
-async def test_document(db_session: AsyncSession, test_user: User) -> Document:
+async def test_document(db_session: AsyncSession, test_user: User, test_organization: Organization) -> Document:
     doc = Document(
         owner_id=test_user.id,
+        organization_id=test_organization.id,
         filename=f"{uuid.uuid4()}.pdf",
         original_name="test.pdf",
         file_path="/tmp/test.pdf",

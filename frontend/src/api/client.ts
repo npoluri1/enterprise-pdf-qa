@@ -47,16 +47,36 @@ export const authApi = {
   me: () => api.get('/auth/me'),
 }
 
+// ── Organizations ─────────────────────────────────────────────
+export const orgsApi = {
+  list: () => api.get('/organizations/'),
+  get: (id: string) => api.get(`/organizations/${id}`),
+  create: (data: { name: string; slug: string }) => api.post('/organizations/', data),
+  update: (id: string, data: { name?: string; is_active?: boolean }) =>
+    api.patch(`/organizations/${id}`, data),
+  delete: (id: string) => api.delete(`/organizations/${id}`),
+  listMembers: (orgId: string) => api.get(`/organizations/${orgId}/members`),
+  addMember: (orgId: string, email: string, role: string) =>
+    api.post(`/organizations/${orgId}/members`, { email, role }),
+  removeMember: (orgId: string, memberId: string) =>
+    api.delete(`/organizations/${orgId}/members/${memberId}`),
+}
+
 // ── Documents ─────────────────────────────────────────────────
 export const docsApi = {
-  upload: (file: File) => {
+  upload: (file: File, orgId?: string) => {
     const form = new FormData()
     form.append('file', file)
+    const params: Record<string, string> = {}
+    if (orgId) params.org_id = orgId
     // Do NOT set Content-Type — Axios must auto-set multipart/form-data with boundary
-    return api.post('/documents/upload', form)
+    return api.post('/documents/upload', form, { params })
   },
-  list: (skip = 0, limit = 20) =>
-    api.get(`/documents/?skip=${String(skip)}&limit=${String(limit)}`),
+  list: (skip = 0, limit = 20, orgId?: string) => {
+    const params: Record<string, string | number> = { skip, limit }
+    if (orgId) params.org_id = orgId
+    return api.get('/documents/', { params })
+  },
   get: (id: string) => api.get(`/documents/${id}`),
   delete: (id: string) => api.delete(`/documents/${id}`),
 }
@@ -65,6 +85,7 @@ export const docsApi = {
 export interface QuestionRequest {
   question: string
   document_ids?: string[]
+  organization_id?: string
   top_k?: number
   use_reranker?: boolean
   stream?: boolean

@@ -46,7 +46,9 @@ class MCPDocumentServer:
         question: str,
         document_ids: list[uuid.UUID] | None = None,
         top_k: int = settings.final_top_k,
+        organization_id: uuid.UUID | None = None,
     ) -> dict[str, Any]:
+        self._org_id = organization_id
         messages: list[dict[str, Any]] = [{"role": "user", "content": question}]
         collected_citations: list[Citation] = []
         turns = 0
@@ -135,9 +137,10 @@ class MCPDocumentServer:
         if scoped_ids:
             document_ids = [uuid.UUID(d) for d in scoped_ids]
         k = min(inputs.get("top_k", top_k), 20)
+        org_id = getattr(self, "_org_id", None)
 
         candidates = await self._retriever.retrieve(
-            query, document_ids, top_k=settings.retrieval_top_k
+            query, document_ids, top_k=settings.retrieval_top_k, organization_id=org_id
         )
         final = await self._reranker.rerank(query, candidates, top_k=k) if candidates else []
 
@@ -171,7 +174,10 @@ class MCPDocumentServer:
         from app.models.document import Document
 
         doc_id = uuid.UUID(inputs["document_id"])
+        org_id = getattr(self, "_org_id", None)
         stmt = select(Document).where(Document.id == doc_id)
+        if org_id:
+            stmt = stmt.where(Document.organization_id == org_id)
         doc = (await self._db.execute(stmt)).scalar_one_or_none()
         if not doc:
             return {"error": "Document not found"}, []
@@ -189,7 +195,10 @@ class MCPDocumentServer:
 
         from app.models.document import Document
 
+        org_id = getattr(self, "_org_id", None)
         stmt = select(Document).where(Document.status == "ready")
+        if org_id:
+            stmt = stmt.where(Document.organization_id == org_id)
         docs = (await self._db.execute(stmt)).scalars().all()
         return {
             "documents": [

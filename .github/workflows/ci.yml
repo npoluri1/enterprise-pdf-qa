@@ -33,9 +33,9 @@ jobs:
             pydantic==2.10.3 pydantic-settings==2.6.1 \
             fastapi==0.115.5 sqlalchemy[asyncio]==2.0.36 asyncpg==0.30.0 \
             structlog==24.4.0 python-jose[cryptography]==3.3.0 bcrypt==4.2.1 \
-            langchain==0.3.14 langgraph==0.2.60 \
+            langchain==0.3.14 langgraph==0.2.60 langgraph-checkpoint-postgres==2.0.9 \
             langchain-openai==0.2.14 langchain-anthropic==0.3.3 \
-            langchain-community==0.3.14 \
+            langchain-community==0.3.14 langsmith==0.2.3 \
             celery==5.4.0 redis==5.2.1 \
             anyio==4.7.0 aiofiles==24.1.0 \
             httpx==0.28.0 uvicorn[standard]==0.32.1 \
@@ -97,8 +97,14 @@ jobs:
       OPENAI_API_KEY: sk-test-placeholder
       ANTHROPIC_API_KEY: sk-ant-test-placeholder
       PRIMARY_LLM: openai
+      OPENAI_MODEL: gpt-4o
+      ANTHROPIC_MODEL: claude-sonnet-4-6
       EMBEDDING_PROVIDER: openai
+      OPENAI_EMBEDDING_MODEL: text-embedding-3-large
       EMBEDDING_DIMENSION: "1536"
+      RERANKER_MODEL: cross-encoder/ms-marco-MiniLM-L-12-v2
+      LANGCHAIN_TRACING_V2: "false"
+      LANGCHAIN_PROJECT: enterprise-pdf-qa-ci
       ALLOWED_ORIGINS: '["http://localhost:3000"]'
 
     steps:

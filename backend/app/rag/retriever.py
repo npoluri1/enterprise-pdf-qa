@@ -34,11 +34,12 @@ class HybridRetriever:
         document_ids: list[uuid.UUID] | None = None,
         top_k: int = settings.retrieval_top_k,
         alpha: float = settings.hybrid_alpha,
+        organization_id: uuid.UUID | None = None,
     ) -> list[dict[str, Any]]:
         query_vec = await self._embedder.embed_query(query)
 
-        dense_results = await self._dense_search(query_vec, document_ids, top_k)
-        sparse_results = await self._sparse_search(query, document_ids, top_k)
+        dense_results = await self._dense_search(query_vec, document_ids, top_k, organization_id)
+        sparse_results = await self._sparse_search(query, document_ids, top_k, organization_id)
 
         fused = self._rrf_fusion(dense_results, sparse_results, k=60)
         return fused[:top_k]
@@ -49,15 +50,21 @@ class HybridRetriever:
         query_vec: list[float],
         document_ids: list[uuid.UUID] | None,
         top_k: int,
+        organization_id: uuid.UUID | None = None,
     ) -> list[dict[str, Any]]:
         vec_str = "[" + ",".join(str(v) for v in query_vec) + "]"
 
-        doc_filter = ""
+        filters = []
         if document_ids:
             ids = ", ".join(f"'{str(d)}'" for d in document_ids)
-            doc_filter = f"AND c.document_id IN ({ids})"
+            filters.append(f"c.document_id IN ({ids})")
+        if organization_id:
+            filters.append(f"d.organization_id = '{organization_id}'::uuid")
 
-        # fmt: off
+        doc_filter = ""
+        if filters:
+            doc_filter = "AND " + " AND ".join(filters)
+
         sql = text(f"""
             SELECT
                 c.id,
@@ -85,19 +92,20 @@ class HybridRetriever:
         query: str,
         document_ids: list[uuid.UUID] | None,
         top_k: int,
+        organization_id: uuid.UUID | None = None,
     ) -> list[dict[str, Any]]:
         from sqlalchemy.orm import selectinload
 
         stmt = (
             select(Chunk)
-            .options(
-                selectinload(Chunk.document)
-            )  # eager-load to prevent lazy-load MissingGreenlet
+            .options(selectinload(Chunk.document))
             .join(Chunk.document)
             .where(Chunk.document.has(status="ready"))
         )
         if document_ids:
             stmt = stmt.where(Chunk.document_id.in_(document_ids))
+        if organization_id:
+            stmt = stmt.where(Chunk.document.has(organization_id=organization_id))
 
         rows = (await self._db.execute(stmt)).scalars().all()
         if not rows:

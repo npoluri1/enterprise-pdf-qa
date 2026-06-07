@@ -1,5 +1,3 @@
-"""Auth endpoints: register, login, refresh."""
-
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.dependencies import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.database import get_db
+from app.models.organization import Organization, OrganizationMembership
 from app.models.user import User
 from app.schemas.user import Token, UserCreate, UserRead
 
@@ -23,14 +22,32 @@ async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)) -> U
     ).scalar_one_or_none()
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
+
     user = User(
         email=payload.email,
         hashed_password=hash_password(payload.password),
         full_name=payload.full_name,
     )
     db.add(user)
+    await db.flush()
+
+    org = Organization(
+        name=f"{payload.full_name or payload.email.split('@')[0]}'s Organization",
+        slug=f"org-{user.id.hex[:12]}",
+    )
+    db.add(org)
+    await db.flush()
+
+    membership = OrganizationMembership(
+        user_id=user.id,
+        organization_id=org.id,
+        role="admin",
+        is_default=True,
+    )
+    db.add(membership)
     await db.commit()
     await db.refresh(user)
+
     return UserRead.model_validate(user)
 
 
@@ -48,6 +65,7 @@ async def login(
         )
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Account inactive")
+
     token = create_access_token(user.id)
     return Token(access_token=token)
 
